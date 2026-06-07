@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zapizza — Artisan Pizza</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+:root {
+  --fire: #FF4500;
+  --ember: #FF8C00;
+  --cream: #FFF8EE;
+  --char: #110C06;
+  --ash: #1E1408;
+  --ash2: #2A1C0D;
+  --gold: #D4A017;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--char);color:var(--cream);font-family:'DM Sans',sans-serif;overflow-x:hidden;cursor:none;}
+
+/* CURSOR */
+.cursor{width:10px;height:10px;background:var(--fire);border-radius:50%;position:fixed;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:width .25s,height .25s;}
+.cursor-ring{width:36px;height:36px;border:1.5px solid rgba(255,69,0,0.45);border-radius:50%;position:fixed;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:left .1s ease-out,top .1s ease-out;}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;justify-content:space-between;align-items:center;padding:26px 60px;background:linear-gradient(to bottom,rgba(17,12,6,0.98) 0%,rgba(17,12,6,0) 100%);}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.18em;color:var(--cream);text-decoration:none;}
+.logo span{color:var(--fire);}
+nav ul{list-style:none;display:flex;gap:44px;}
+nav ul a{color:rgba(255,248,238,.65);text-decoration:none;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;transition:color .3s;}
+nav ul a:hover{color:var(--fire);}
+.nav-cta{background:var(--fire);color:var(--cream)!important;padding:9px 22px;border-radius:2px;font-weight:500!important;opacity:1!important;}
+.nav-cta:hover{background:var(--ember);}
+
+/* ====== HERO ====== */
+#hero{position:relative;height:100vh;display:flex;align-items:center;overflow:hidden;}
+.hero-bg{position:absolute;inset:0;z-index:0;}
+.hero-bg img{width:100%;height:100%;object-fit:cover;object-position:center;transform:scale(1.08);animation:heroZoom 12s ease-in-out infinite alternate;}
+.hero-bg::after{content:'';position:absolute;inset:0;background:linear-gradient(105deg, rgba(17,12,6,0.92) 0%, rgba(17,12,6,0.65) 45%, rgba(17,12,6,0.25) 100%);}
+@keyframes heroZoom{from{transform:scale(1.08);}to{transform:scale(1.0);}  }
+#hero-canvas{position:absolute;inset:0;z-index:2;pointer-events:none;width:100%!important;height:100%!important;}
+.hero-content{position:relative;z-index:10;padding:0 60px;max-width:720px;}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;font-size:.68rem;letter-spacing:.22em;text-transform:uppercase;color:var(--ember);margin-bottom:20px;opacity:0;animation:fadeUp .8s .3s forwards;}
+.hero-badge::before{content:'';width:22px;height:1px;background:var(--ember);}
+h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(5rem,11vw,10.5rem);line-height:.9;letter-spacing:.02em;opacity:0;animation:fadeUp .9s .5s forwards;}
+h1 em{display:block;font-family:'Playfair Display',serif;font-style:italic;font-size:.5em;color:var(--gold);letter-spacing:.07em;}
+.hero-sub{margin-top:26px;font-size:1rem;line-height:1.75;color:rgba(255,248,238,.62);max-width:440px;opacity:0;animation:fadeUp .9s .7s forwards;}
+.hero-btns{display:flex;gap:14px;margin-top:40px;opacity:0;animation:fadeUp .9s .9s forwards;}
+.btn-primary{background:var(--fire);color:var(--cream);border:none;border-radius:2px;padding:15px 38px;font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:500;letter-spacing:.1em;text-transform:uppercase;cursor:none;transition:background .3s,transform .2s;text-decoration:none;display:inline-block;}
+.btn-primary:hover{background:var(--ember);transform:translateY(-2px);}
+.btn-ghost{border:1px solid rgba(255,248,238,.28);color:var(--cream);border-radius:2px;padding:15px 38px;font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:400;letter-spacing:.1em;text-transform:uppercase;cursor:none;transition:border-color .3s,transform .2s;text-decoration:none;display:inline-flex;align-items:center;gap:9px;}
+.btn-ghost:hover{border-color:var(--fire);transform:translateY(-2px);}
+.scroll-hint{position:absolute;bottom:36px;left:60px;z-index:10;display:flex;align-items:center;gap:10px;font-size:.67rem;letter-spacing:.15em;text-transform:uppercase;color:rgba(255,248,238,.38);opacity:0;animation:fadeUp .9s 1.2s forwards;}
+.scroll-line{width:1px;height:44px;background:linear-gradient(to bottom,rgba(255,248,238,.4),transparent);animation:scrollPulse 2s infinite;}
+
+/* MARQUEE */
+.marquee-section{background:var(--fire);padding:16px 0;overflow:hidden;white-space:nowrap;}
+.marquee-track{display:inline-flex;animation:marquee 22s linear infinite;}
+.marquee-item{font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:.16em;color:var(--cream);padding:0 44px;display:inline-flex;align-items:center;gap:44px;}
+.marquee-dot{width:5px;height:5px;background:rgba(255,248,238,.45);border-radius:50%;}
+
+/* ====== INTRO STRIP ====== */
+#intro-strip{display:grid;grid-template-columns:1fr 1fr 1fr;height:60vh;overflow:hidden;}
+.strip-img{position:relative;overflow:hidden;}
+.strip-img img{width:100%;height:100%;object-fit:cover;transition:transform .8s ease;}
+.strip-img:hover img{transform:scale(1.06);}
+.strip-img::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(17,12,6,.8) 0%,rgba(17,12,6,.1) 60%,transparent 100%);}
+.strip-label{position:absolute;bottom:24px;left:24px;z-index:2;font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:.1em;color:var(--cream);}
+.strip-label span{display:block;font-family:'DM Sans',sans-serif;font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,248,238,.5);font-weight:300;margin-bottom:2px;}
+
+/* ====== STORY ====== */
+#story{display:grid;grid-template-columns:1fr 1fr;min-height:90vh;}
+.story-left{background:var(--ash);padding:110px 80px;display:flex;flex-direction:column;justify-content:center;position:relative;overflow:hidden;}
+.story-left::before{content:'ZAPIZZA';position:absolute;font-family:'Bebas Neue',sans-serif;font-size:16rem;color:rgba(255,255,255,.018);bottom:-30px;right:-50px;pointer-events:none;line-height:1;}
+.section-label{font-size:.68rem;letter-spacing:.26em;text-transform:uppercase;color:var(--fire);margin-bottom:18px;}
+h2{font-family:'Bebas Neue',sans-serif;font-size:clamp(3rem,5vw,5.5rem);line-height:.95;letter-spacing:.03em;}
+h2 em{font-family:'Playfair Display',serif;font-style:italic;color:var(--gold);font-size:.85em;}
+.story-text{margin-top:28px;font-size:.93rem;line-height:1.82;color:rgba(255,248,238,.58);max-width:420px;}
+.story-stats{display:flex;gap:44px;margin-top:52px;}
+.stat-num{font-family:'Bebas Neue',sans-serif;font-size:3rem;color:var(--fire);line-height:1;}
+.stat-label{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,248,238,.38);margin-top:4px;}
+.story-right{position:relative;overflow:hidden;}
+.story-right img{width:100%;height:100%;object-fit:cover;transform:scale(1.04);transition:transform 8s ease;}
+.story-right:hover img{transform:scale(1.0);}
+.story-right::before{content:'';position:absolute;inset:0;z-index:1;background:linear-gradient(to right,rgba(30,20,8,.5) 0%,transparent 50%);}
+.story-quote{position:absolute;bottom:48px;left:40px;right:40px;z-index:2;}
+.story-quote blockquote{font-family:'Playfair Display',serif;font-style:italic;font-size:1.3rem;line-height:1.5;color:var(--cream);}
+.story-quote cite{display:block;margin-top:10px;font-family:'DM Sans',sans-serif;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,248,238,.4);}
+
+/* ====== MENU ====== */
+#menu{padding:110px 60px;background:var(--char);}
+.menu-header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:72px;}
+.menu-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;}
+.pizza-card{position:relative;overflow:hidden;aspect-ratio:3/4;cursor:none;background:var(--ash2);}
+.pizza-card img{width:100%;height:100%;object-fit:cover;transition:transform .9s cubic-bezier(.25,.46,.45,.94);display:block;}
+.pizza-card:hover img{transform:scale(1.08);}
+.pizza-card-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(17,12,6,.97) 0%,rgba(17,12,6,.5) 40%,rgba(17,12,6,.05) 100%);transition:opacity .4s;}
+.pizza-card:hover .pizza-card-overlay{opacity:.88;}
+.pizza-card-inner{position:absolute;bottom:0;left:0;right:0;padding:32px;transform:translateY(8px);transition:transform .5s cubic-bezier(.25,.46,.45,.94);}
+.pizza-card:hover .pizza-card-inner{transform:translateY(0);}
+.pizza-num{font-family:'Bebas Neue',sans-serif;font-size:4.5rem;line-height:1;color:rgba(255,248,238,.05);margin-bottom:-14px;}
+.pizza-name{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.05em;line-height:1;}
+.pizza-desc{font-size:.76rem;color:rgba(255,248,238,.5);margin-top:8px;letter-spacing:.03em;line-height:1.6;}
+.pizza-footer{display:flex;align-items:center;justify-content:space-between;margin-top:18px;}
+.pizza-price{font-family:'Playfair Display',serif;font-style:italic;font-size:1.3rem;color:var(--gold);}
+.pizza-tag{display:inline-block;background:var(--fire);color:var(--cream);font-size:.58rem;letter-spacing:.16em;text-transform:uppercase;padding:4px 10px;border-radius:2px;}
+/* hover reveal detail */
+.pizza-detail{max-height:0;overflow:hidden;transition:max-height .5s ease;font-size:.75rem;color:rgba(255,248,238,.4);letter-spacing:.04em;line-height:1.6;margin-top:6px;}
+.pizza-card:hover .pizza-detail{max-height:60px;}
+
+/* ====== FULL BLEED PHOTO ====== */
+#hero2{position:relative;height:75vh;overflow:hidden;}
+#hero2 img{width:100%;height:100%;object-fit:cover;object-position:center 60%;}
+#hero2::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,rgba(17,12,6,.6) 0%,rgba(17,12,6,.2) 30%,rgba(17,12,6,.2) 70%,rgba(17,12,6,.85) 100%);}
+.hero2-text{position:absolute;bottom:70px;left:60px;right:60px;z-index:2;display:flex;align-items:flex-end;justify-content:space-between;}
+.hero2-text h2{font-size:clamp(3.5rem,7vw,7rem);}
+.hero2-text p{max-width:360px;font-size:.9rem;line-height:1.75;color:rgba(255,248,238,.6);margin-bottom:.5rem;}
+
+/* ====== PROCESS ====== */
+#process{padding:110px 60px;background:var(--ash);}
+.process-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin-top:72px;}
+.process-card{padding:52px 36px;background:var(--char);position:relative;overflow:hidden;transition:background .4s;}
+.process-card:hover{background:#1A1008;}
+.process-step-num{font-family:'Bebas Neue',sans-serif;font-size:6rem;line-height:1;color:rgba(255,69,0,.06);position:absolute;top:14px;right:18px;}
+.process-icon{font-size:2.2rem;margin-bottom:24px;}
+.process-title{font-family:'Bebas Neue',sans-serif;font-size:1.55rem;letter-spacing:.05em;margin-bottom:12px;}
+.process-desc{font-size:.83rem;color:rgba(255,248,238,.48);line-height:1.72;}
+
+/* ====== PHOTO COLLAGE ====== */
+#collage{display:grid;grid-template-columns:2fr 1fr 1fr;grid-template-rows:1fr 1fr;height:80vh;gap:3px;}
+.col-cell{overflow:hidden;position:relative;}
+.col-cell img{width:100%;height:100%;object-fit:cover;transition:transform .8s ease;}
+.col-cell:hover img{transform:scale(1.05);}
+.col-cell.tall{grid-row:1/3;}
+.col-cell::after{content:'';position:absolute;inset:0;background:rgba(17,12,6,.15);}
+
+/* ====== CTA ====== */
+#cta{position:relative;padding:150px 60px;text-align:center;overflow:hidden;}
+#cta-bg{position:absolute;inset:0;z-index:0;}
+#cta-bg img{width:100%;height:100%;object-fit:cover;object-position:center 70%;}
+#cta-bg::after{content:'';position:absolute;inset:0;background:rgba(17,12,6,.82);}
+#cta-canvas{position:absolute;inset:0;z-index:2;pointer-events:none;width:100%!important;height:100%!important;}
+.cta-content{position:relative;z-index:10;}
+.cta-content h2{font-size:clamp(4rem,9vw,9.5rem);}
+.cta-content p{margin:22px auto;max-width:480px;color:rgba(255,248,238,.6);font-size:.98rem;line-height:1.75;}
+.cta-content .btn-primary{margin-top:12px;font-size:.88rem;padding:17px 52px;}
+
+/* ====== FOOTER ====== */
+footer{background:#080502;padding:80px 60px 40px;}
+.footer-top{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:72px;margin-bottom:56px;}
+.footer-brand .logo{font-size:2.6rem;}
+.footer-tagline{margin-top:14px;font-size:.83rem;line-height:1.72;color:rgba(255,248,238,.35);max-width:280px;}
+.footer-col h4{font-family:'Bebas Neue',sans-serif;font-size:.95rem;letter-spacing:.16em;color:var(--fire);margin-bottom:18px;}
+.footer-col ul{list-style:none;}
+.footer-col ul li{margin-bottom:9px;}
+.footer-col ul a{color:rgba(255,248,238,.38);text-decoration:none;font-size:.82rem;transition:color .3s;}
+.footer-col ul a:hover{color:var(--cream);}
+.footer-bottom{border-top:1px solid rgba(255,248,238,.05);padding-top:28px;display:flex;justify-content:space-between;align-items:center;}
+.footer-bottom p{font-size:.72rem;color:rgba(255,248,238,.22);letter-spacing:.05em;}
+
+/* REVEAL */
+.reveal{opacity:0;transform:translateY(36px);transition:opacity .9s ease,transform .9s ease;}
+.reveal.visible{opacity:1;transform:translateY(0);}
+
+/* KEYFRAMES */
+@keyframes fadeUp{from{opacity:0;transform:translateY(28px);}to{opacity:1;transform:translateY(0);}}
+@keyframes marquee{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+@keyframes scrollPulse{0%,100%{opacity:.4;}50%{opacity:1;}}
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="logo">ZA<span>PI</span>ZZA</a>
+  <ul>
+    <li><a href="#story">Our Story</a></li>
+    <li><a href="#menu">Menu</a></li>
+    <li><a href="#process">Craft</a></li>
+    <li><a href="#cta" class="nav-cta">Order Now</a></li>
+  </ul>
+</nav>
+
+<!-- HERO with real photo bg -->
+<section id="hero">
+  <div class="hero-bg">
+    <img src="https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=1800&q=85&fit=crop" alt="Wood fired pizza" loading="eager">
+  </div>
+  <canvas id="hero-canvas"></canvas>
+  <div class="hero-content">
+    <div class="hero-badge">Wood-fired since 1987</div>
+    <h1>FIRE<br><em>& Dough</em></h1>
+    <p class="hero-sub">Neapolitan tradition, reborn in every crust. Italian wheat, 72-hour ferment, fired at 900°F in stone ovens built by hand.</p>
+    <div class="hero-btns">
+      <a href="#menu" class="btn-primary">Explore Menu</a>
+      <a href="#story" class="btn-ghost">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.2"/><polygon points="6.5,5 11,8 6.5,11" fill="currentColor"/></svg>
+        Our Story
+      </a>
+    </div>
+  </div>
+  <div class="scroll-hint"><div class="scroll-line"></div>Scroll to explore</div>
+</section>
+
+<!-- MARQUEE -->
+<div class="marquee-section">
+  <div class="marquee-track">
+    <span class="marquee-item">Margherita <span class="marquee-dot"></span></span>
+    <span class="marquee-item">Diavola <span class="marquee-dot"></span></span>
+    <span class="marquee-item">Truffle & Porcini <span class="marquee-dot"></span></span>
+    <span class="marquee-item">Burrata Bianca <span class="marquee-dot"></span></span>
+    <span class="marquee-item">Prosciutto Crudo <span class="marquee-dot"></span></span>
+    <span class="marquee-item">Quattro Formaggi <span class="marquee-dot"></span></span>
+    <span class="marquee-item">Margherita <span class="marquee-dot"></span></span>
+    <span class="marquee-item">Diavola <span class="marquee-dot"></span></span>
+    <span class="marquee-item">Truffle & Porcini <span class="marquee-dot"></span></span>
+    <span class="marquee-item">Burrata Bianca <span class="marquee-dot"></span></span>
+    <span class="marquee-item">Prosciutto Crudo <span class="marquee-dot"></span></span>
+    <span class="marquee-item">Quattro Formaggi <span class="marquee-dot"></span></span>
+  </div>
+</div>
+
+<!-- INTRO PHOTO STRIP -->
+<div id="intro-strip">
+  <div class="strip-img">
+    <img src="https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800&q=80&fit=crop" alt="Overhead pizza">
+    <div class="strip-label"><span>Artisan</span>Wood-Fired Crust</div>
+  </div>
+  <div class="strip-img">
+    <img src="https://images.unsplash.com/photo-1571407970349-bc81e7e96d47?w=800&q=80&fit=crop&crop=center" alt="Margherita pizza">
+    <div class="strip-label"><span>Classic</span>Margherita</div>
+  </div>
+  <div class="strip-img">
+    <img src="https://images.unsplash.com/photo-1604382354936-07c5d9983bd3?w=800&q=80&fit=crop" alt="Pizza dark">
+    <div class="strip-label"><span>Fresh</span>Daily Sourced</div>
+  </div>
+</div>
+
+<!-- STORY -->
+<section id="story">
+  <div class="story-left reveal">
+    <div class="section-label">The Zapizza Story</div>
+    <h2>Crafted in <em>Flame,</em><br>Served with Soul</h2>
+    <p class="story-text">Three generations ago, Nonna Rosa carried her mother's sourdough starter from Naples to build something that could never be replicated. Every pizza we make carries that lineage — unpasteurized, untamed, unforgettable.</p>
+    <div class="story-stats">
+      <div><div class="stat-num">72h</div><div class="stat-label">Dough Ferment</div></div>
+      <div><div class="stat-num">900°</div><div class="stat-label">Oven Temp</div></div>
+      <div><div class="stat-num">3</div><div class="stat-label">Generations</div></div>
+    </div>
+  </div>
+  <div class="story-right">
+    <img src="https://images.unsplash.com/photo-1528137871618-79d2761e3fd5?w=1000&q=85&fit=crop&crop=center" alt="Pizza close up">
+    <div class="story-quote">
+      <blockquote>"The oven is not a machine. It breathes, it lives, it decides."</blockquote>
+      <cite>— Marco, Head Pizzaiolo</cite>
+    </div>
+  </div>
+</section>
+
+<!-- MENU -->
+<section id="menu">
+  <div class="menu-header reveal">
+    <div>
+      <div class="section-label">Signature Pies</div>
+      <h2>The <em>Menu</em></h2>
+    </div>
+    <a href="#" class="btn-ghost">View Full Menu →</a>
+  </div>
+  <div class="menu-grid">
+
+    <!-- Card 1 -->
+    <div class="pizza-card reveal">
+      <img src="https://images.unsplash.com/photo-1594007654729-407eedc4be65?w=700&q=80&fit=crop" alt="Margherita Classica" loading="lazy">
+      <div class="pizza-card-overlay"></div>
+      <div class="pizza-card-inner">
+        <div class="pizza-num">01</div>
+        <div class="pizza-name">Margherita<br>Classica</div>
+        <div class="pizza-desc">San Marzano DOP · Fior di latte · Fresh basil · EVOO</div>
+        <div class="pizza-detail">Our original. The tomato sauce simmers for 4 hours with Sicilian oregano before it ever touches dough.</div>
+        <div class="pizza-footer">
+          <div class="pizza-price">₹649</div>
+          <span class="pizza-tag">Bestseller</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2 -->
+    <div class="pizza-card reveal">
+      <img src="https://images.unsplash.com/photo-1548369937-47519962c11a?w=700&q=80&fit=crop" alt="Diavola" loading="lazy">
+      <div class="pizza-card-overlay"></div>
+      <div class="pizza-card-inner">
+        <div class="pizza-num">02</div>
+        <div class="pizza-name">Diavola<br>Infernale</div>
+        <div class="pizza-desc">Calabrian chilli · Spicy salami · Smoked provola</div>
+        <div class="pizza-detail">Twice-aged Calabrian salami, hand-cut thick. Provola smoked over applewood for 36 hours.</div>
+        <div class="pizza-footer">
+          <div class="pizza-price">₹749</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3 -->
+    <div class="pizza-card reveal">
+      <img src="https://images.unsplash.com/photo-1513104890138-7c749659a591?w=700&q=80&fit=crop" alt="Tartufo Nero" loading="lazy">
+      <div class="pizza-card-overlay"></div>
+      <div class="pizza-card-inner">
+        <div class="pizza-num">03</div>
+        <div class="pizza-name">Tartufo<br>Nero</div>
+        <div class="pizza-desc">Black truffle · Porcini · Fontina · Rosemary</div>
+        <div class="pizza-detail">Black truffle shaved to order tableside. Fontina from Aosta Valley, aged 90 days minimum.</div>
+        <div class="pizza-footer">
+          <div class="pizza-price">₹1,149</div>
+          <span class="pizza-tag">Chef's Special</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- FULL BLEED PHOTO BREAK -->
+<section id="hero2">
+  <img src="https://images.unsplash.com/photo-1593560708920-61dd98c46a4e?w=1800&q=85&fit=crop&crop=center" alt="Pizza beauty shot" loading="lazy">
+  <div class="hero2-text reveal">
+    <h2>Every Bite<br><em>Tells a Story</em></h2>
+    <p>Blistered, charred, alive. 90 seconds is all it takes when the oven has been breathing for 3 hours.</p>
+  </div>
+</section>
+
+<!-- PROCESS -->
+<section id="process">
+  <div class="reveal">
+    <div class="section-label">How We Do It</div>
+    <h2>The Art of <em>the Craft</em></h2>
+  </div>
+  <div class="process-grid">
+    <div class="process-card reveal">
+      <div class="process-step-num">01</div>
+      <div class="process-icon">🌾</div>
+      <div class="process-title">Italian Flour</div>
+      <div class="process-desc">We import Caputo "00" flour from Naples — the only grain that delivers the perfect leopard char and airy crumb.</div>
+    </div>
+    <div class="process-card reveal">
+      <div class="process-step-num">02</div>
+      <div class="process-icon">🫙</div>
+      <div class="process-title">72h Ferment</div>
+      <div class="process-desc">Our heritage sourdough starter, named Rosa, rests for three days developing complexity and a featherlight structure.</div>
+    </div>
+    <div class="process-card reveal">
+      <div class="process-step-num">03</div>
+      <div class="process-icon">🤲</div>
+      <div class="process-title">Hand Stretched</div>
+      <div class="process-desc">Never rolled, never pinned. Each disc is coaxed open by hand to preserve every last gas bubble.</div>
+    </div>
+    <div class="process-card reveal">
+      <div class="process-step-num">04</div>
+      <div class="process-icon">🔥</div>
+      <div class="process-title">Stone Oven</div>
+      <div class="process-desc">90 seconds at 900°F in our Neapolitan oven. Blistered, charred, and gloriously alive.</div>
+    </div>
+  </div>
+</section>
+
+<!-- PHOTO COLLAGE -->
+<div id="collage">
+  <div class="col-cell tall">
+    <img src="https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=900&q=80&fit=crop&crop=center" alt="Pizza overhead" loading="lazy">
+  </div>
+  <div class="col-cell">
+    <img src="https://images.unsplash.com/photo-1604382354936-07c5d9983bd3?w=600&q=80&fit=crop" alt="Pizza dark" loading="lazy">
+  </div>
+  <div class="col-cell">
+    <img src="https://images.unsplash.com/photo-1571407970349-bc81e7e96d47?w=600&q=80&fit=crop&crop=bottom" alt="Margherita" loading="lazy">
+  </div>
+  <div class="col-cell">
+    <img src="https://images.unsplash.com/photo-1594007654729-407eedc4be65?w=600&q=80&fit=crop&crop=top" alt="Pizza" loading="lazy">
+  </div>
+  <div class="col-cell">
+    <img src="https://images.unsplash.com/photo-1548369937-47519962c11a?w=600&q=80&fit=crop" alt="Diavola" loading="lazy">
+  </div>
+</div>
+
+<!-- CTA -->
+<section id="cta">
+  <div id="cta-bg">
+    <img src="https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=1800&q=80&fit=crop&crop=center" alt="CTA background" loading="lazy">
+  </div>
+  <canvas id="cta-canvas"></canvas>
+  <div class="cta-content reveal">
+    <div class="section-label">Reserve Your Table</div>
+    <h2>Taste the <em>Fire</em></h2>
+    <p>Dine in or order for delivery. Every pie made to order, never before, never after.</p>
+    <a href="#" class="btn-primary">Order Now</a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-top">
+    <div class="footer-brand">
+      <a href="#" class="logo">ZA<span>PI</span>ZZA</a>
+      <p class="footer-tagline">Zapizza — where every crust tells a story of fire, flour, and obsession.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Menu</h4>
+      <ul>
+        <li><a href="#">Signature Pies</a></li>
+        <li><a href="#">Seasonal</a></li>
+        <li><a href="#">Sides & Starters</a></li>
+        <li><a href="#">Desserts</a></li>
+        <li><a href="#">Wine & Drinks</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Visit</h4>
+      <ul>
+        <li><a href="#">Connaught Place</a></li>
+        <li><a href="#">Bandra West</a></li>
+        <li><a href="#">Koregaon Park</a></li>
+        <li><a href="#">Careers</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Follow</h4>
+      <ul>
+        <li><a href="#">Instagram</a></li>
+        <li><a href="#">TikTok</a></li>
+        <li><a href="#">Newsletter</a></li>
+        <li><a href="#">Press Kit</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2026 Zapizza Artisan Pizza. All Rights Reserved.</p>
+    <p>Privacy · Terms · Allergen Info</p>
+  </div>
+</footer>
+
+<script>
+// CURSOR
+const cursor=document.getElementById('cursor'),ring=document.getElementById('cursorRing');
+document.addEventListener('mousemove',e=>{
+  cursor.style.left=e.clientX+'px';cursor.style.top=e.clientY+'px';
+  setTimeout(()=>{ring.style.left=e.clientX+'px';ring.style.top=e.clientY+'px';},80);
+});
+
+// SCROLL REVEAL
+const obs=new IntersectionObserver(entries=>{
+  entries.forEach((e,i)=>{if(e.isIntersecting)setTimeout(()=>e.target.classList.add('visible'),i*100);});
+},{threshold:0.08});
+document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+
+// THREE HELPER
+function mkRenderer(canvas){
+  const r=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true});
+  r.setPixelRatio(Math.min(window.devicePixelRatio,2));return r;
+}
+
+// ---- HERO EMBER PARTICLES ----
+(function(){
+  const canvas=document.getElementById('hero-canvas');
+  const renderer=mkRenderer(canvas);
+  const scene=new THREE.Scene();
+  const camera=new THREE.PerspectiveCamera(60,1,.1,100);
+  camera.position.set(0,0,8);
+  const count=120;
+  const geo=new THREE.BufferGeometry();
+  const pos=new Float32Array(count*3),vel=new Float32Array(count*3);
+  for(let i=0;i<count;i++){
+    pos[i*3]=(Math.random()-.5)*20;pos[i*3+1]=(Math.random()-.5)*12;pos[i*3+2]=(Math.random()-.5)*5;
+    vel[i*3]=(Math.random()-.5)*.012;vel[i*3+1]=.015+Math.random()*.025;vel[i*3+2]=0;
+  }
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  const mat=new THREE.PointsMaterial({color:0xFF5500,size:.055,transparent:true,opacity:.75});
+  scene.add(new THREE.Points(geo,mat));
+  function resize(){const w=canvas.parentElement.offsetWidth,h=canvas.parentElement.offsetHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();}
+  resize();window.addEventListener('resize',resize);
+  let t=0;
+  function animate(){requestAnimationFrame(animate);t+=.01;
+    const p=geo.attributes.position.array;
+    for(let i=0;i<count;i++){p[i*3]+=vel[i*3];p[i*3+1]+=vel[i*3+1];if(p[i*3+1]>7){p[i*3]=(Math.random()-.5)*20;p[i*3+1]=-6;}}
+    geo.attributes.position.needsUpdate=true;
+    mat.color.setHSL(.04+Math.sin(t)*.02,1,.58);
+    renderer.render(scene,camera);}
+  animate();
+})();
+
+// ---- CTA EMBER PARTICLES ----
+(function(){
+  const canvas=document.getElementById('cta-canvas');
+  const renderer=mkRenderer(canvas);
+  renderer.setClearColor(0x000000,0);
+  const scene=new THREE.Scene();
+  const camera=new THREE.PerspectiveCamera(60,1,.1,100);
+  camera.position.set(0,0,8);
+  const count=180;
+  const geo=new THREE.BufferGeometry();
+  const pos=new Float32Array(count*3),vel=new Float32Array(count*3);
+  for(let i=0;i<count;i++){
+    pos[i*3]=(Math.random()-.5)*22;pos[i*3+1]=(Math.random()-.5)*12;pos[i*3+2]=(Math.random()-.5)*3;
+    vel[i*3]=(Math.random()-.5)*.01;vel[i*3+1]=.018+Math.random()*.03;
+  }
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  const mat=new THREE.PointsMaterial({color:0xFF6600,size:.07,transparent:true,opacity:.8});
+  scene.add(new THREE.Points(geo,mat));
+  function resize(){const el=canvas.parentElement;renderer.setSize(el.offsetWidth,el.offsetHeight);camera.aspect=el.offsetWidth/el.offsetHeight;camera.updateProjectionMatrix();}
+  resize();window.addEventListener('resize',resize);
+  let t=0;
+  function animate(){requestAnimationFrame(animate);t+=.01;
+    const p=geo.attributes.position.array;
+    for(let i=0;i<count;i++){p[i*3]+=vel[i*3];p[i*3+1]+=vel[i*3+1];if(p[i*3+1]>7){p[i*3]=(Math.random()-.5)*22;p[i*3+1]=-6;}}
+    geo.attributes.position.needsUpdate=true;
+    mat.color.setHSL(.05+Math.sin(t*2)*.02,1,.55);
+    renderer.render(scene,camera);}
+  animate();
+})();
+</script>
+
+<!-- ======================================================
+     ORDER MODAL + LIVE MENU FROM API
+     ====================================================== -->
+<style>
+/* ORDER MODAL */
+.zp-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:2000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .3s;}
+.zp-overlay.open{opacity:1;pointer-events:all;}
+.zp-modal{background:#1A1108;border:1px solid rgba(255,248,238,.08);border-radius:14px;width:540px;max-width:95vw;max-height:90vh;overflow-y:auto;transform:translateY(30px);transition:transform .35s cubic-bezier(.25,.46,.45,.94);}
+.zp-overlay.open .zp-modal{transform:translateY(0);}
+.zp-modal-head{padding:24px 28px;border-bottom:1px solid rgba(255,248,238,.07);display:flex;justify-content:space-between;align-items:center;}
+.zp-modal-title{font-family:'Bebas Neue',sans-serif;font-size:1.7rem;letter-spacing:.08em;}
+.zp-modal-close{background:none;border:none;color:rgba(255,248,238,.4);font-size:1.5rem;cursor:pointer;line-height:1;padding:4px 8px;transition:color .2s;}
+.zp-modal-close:hover{color:#FF4500;}
+.zp-modal-body{padding:28px;}
+.zp-step{display:none;}.zp-step.active{display:block;}
+.zp-step-label{font-size:.65rem;letter-spacing:.22em;text-transform:uppercase;color:#FF4500;margin-bottom:20px;}
+/* Menu in modal */
+.zp-cat-title{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:.08em;color:rgba(255,248,238,.4);margin:20px 0 10px;padding-bottom:6px;border-bottom:1px solid rgba(255,248,238,.06);}
+.zp-cat-title:first-child{margin-top:0;}
+.zp-item-row{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid rgba(255,248,238,.04);cursor:pointer;}
+.zp-item-row:last-child{border-bottom:none;}
+.zp-item-img{width:52px;height:52px;border-radius:7px;object-fit:cover;flex-shrink:0;background:#2A1C0D;}
+.zp-item-info{flex:1;}
+.zp-item-name{font-size:.9rem;font-weight:500;margin-bottom:2px;}
+.zp-item-desc{font-size:.72rem;color:rgba(255,248,238,.4);line-height:1.4;}
+.zp-item-price{font-family:'Playfair Display',serif;font-style:italic;color:#D4A017;font-size:1rem;flex-shrink:0;}
+.zp-qty{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.zp-qty-btn{width:26px;height:26px;border-radius:50%;border:1px solid rgba(255,248,238,.15);background:none;color:#FFF8EE;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;line-height:1;}
+.zp-qty-btn:hover{background:#FF4500;border-color:#FF4500;}
+.zp-qty-num{width:20px;text-align:center;font-size:.88rem;font-weight:600;}
+/* Cart badge */
+.zp-cart-bar{position:sticky;bottom:0;background:linear-gradient(to top,#1A1108 80%,transparent);padding:16px 0 0;margin-top:10px;}
+.zp-cart-btn{width:100%;background:#FF4500;border:none;border-radius:8px;padding:14px;color:#FFF8EE;font-family:'DM Sans',sans-serif;font-size:.88rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:background .2s;}
+.zp-cart-btn:hover{background:#FF7A00;}
+.zp-cart-btn:disabled{background:rgba(255,69,0,.3);cursor:not-allowed;}
+/* Form step */
+.zp-form-group{margin-bottom:16px;}
+.zp-form-group label{display:block;font-size:.67rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,248,238,.45);margin-bottom:7px;}
+.zp-form-group input,.zp-form-group select,.zp-form-group textarea{width:100%;background:#231810;border:1px solid rgba(255,248,238,.08);border-radius:7px;padding:11px 14px;color:#FFF8EE;font-family:'DM Sans',sans-serif;font-size:.9rem;outline:none;transition:border-color .2s;}
+.zp-form-group input:focus,.zp-form-group select:focus,.zp-form-group textarea:focus{border-color:#FF4500;}
+.zp-form-group select option{background:#231810;}
+.zp-form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+/* Cart summary */
+.zp-summary-row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid rgba(255,248,238,.05);font-size:.85rem;}
+.zp-summary-row:last-of-type{border-bottom:none;}
+.zp-total-row{display:flex;justify-content:space-between;padding:14px 0 0;font-size:1rem;font-weight:600;border-top:1px solid rgba(255,248,238,.1);margin-top:4px;}
+.zp-total-price{font-family:'Playfair Display',serif;font-style:italic;color:#D4A017;font-size:1.2rem;}
+.zp-back-btn{background:none;border:none;color:rgba(255,248,238,.45);font-family:'DM Sans',sans-serif;font-size:.8rem;cursor:pointer;padding:0;margin-bottom:18px;display:flex;align-items:center;gap:6px;transition:color .2s;}
+.zp-back-btn:hover{color:#FFF8EE;}
+/* Success */
+.zp-success{text-align:center;padding:20px 0;}
+.zp-success-icon{font-size:3.5rem;margin-bottom:16px;}
+.zp-success-num{font-family:'Bebas Neue',sans-serif;font-size:2rem;color:#FF4500;letter-spacing:.1em;}
+.zp-success p{color:rgba(255,248,238,.5);font-size:.88rem;line-height:1.7;margin-top:8px;}
+/* Toast */
+.zp-toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(80px);background:#1A1108;border:1px solid rgba(255,69,0,.4);border-radius:8px;padding:12px 24px;font-size:.85rem;color:#FFF8EE;z-index:3000;transition:transform .4s cubic-bezier(.25,.46,.45,.94);pointer-events:none;}
+.zp-toast.show{transform:translateX(-50%) translateY(0);}
+/* Floating cart button */
+.zp-float-cart{position:fixed;bottom:30px;right:30px;z-index:1500;background:#FF4500;border:none;border-radius:50px;padding:14px 22px;color:#FFF8EE;font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;display:none;align-items:center;gap:10px;box-shadow:0 8px 30px rgba(255,69,0,.4);transition:all .3s;letter-spacing:.05em;}
+.zp-float-cart.visible{display:flex;}
+.zp-float-cart:hover{background:#FF7A00;transform:translateY(-2px);}
+.zp-float-badge{background:#FFF8EE;color:#FF4500;border-radius:50%;width:20px;height:20px;font-size:.72rem;display:flex;align-items:center;justify-content:center;font-weight:700;}
+</style>
+
+<!-- ORDER MODAL -->
+<div class="zp-overlay" id="zp-overlay">
+  <div class="zp-modal" id="zp-modal">
+    <div class="zp-modal-head">
+      <div class="zp-modal-title" id="zp-modal-title">Order Online</div>
+      <button class="zp-modal-close" onclick="zpClose()">✕</button>
+    </div>
+    <div class="zp-modal-body">
+
+      <!-- STEP 1: Menu -->
+      <div class="zp-step active" id="zp-step-1">
+        <div class="zp-step-label">Step 1 of 3 — Choose your pizzas</div>
+        <div id="zp-menu-list"><div style="text-align:center;padding:40px;color:rgba(255,248,238,.3)">Loading menu...</div></div>
+        <div class="zp-cart-bar">
+          <button class="zp-cart-btn" id="zp-to-step2" onclick="zpGoStep(2)" disabled>
+            <span>View Cart</span>
+            <span id="zp-cart-total">₹0</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 2: Details -->
+      <div class="zp-step" id="zp-step-2">
+        <button class="zp-back-btn" onclick="zpGoStep(1)">← Back to menu</button>
+        <div class="zp-step-label">Step 2 of 3 — Your details</div>
+        <div class="zp-form-row">
+          <div class="zp-form-group"><label>Your Name *</label><input id="zp-name" placeholder="Rahul Sharma"></div>
+          <div class="zp-form-group"><label>Phone *</label><input id="zp-phone" placeholder="9876543210" type="tel"></div>
+        </div>
+        <div class="zp-form-group">
+          <label>Order Type</label>
+          <select id="zp-type" onchange="zpToggleAddress()">
+            <option value="delivery">🛵 Delivery</option>
+            <option value="dine-in">🍽 Dine-in</option>
+          </select>
+        </div>
+        <div class="zp-form-group" id="zp-addr-group">
+          <label>Delivery Address *</label>
+          <textarea id="zp-address" rows="2" placeholder="House no, Street, Area, City"></textarea>
+        </div>
+        <div class="zp-form-group"><label>Special Instructions</label><input id="zp-notes" placeholder="Extra cheese, less spicy..."></div>
+        <button class="zp-cart-btn" onclick="zpGoStep(3)">Review Order →</button>
+      </div>
+
+      <!-- STEP 3: Review -->
+      <div class="zp-step" id="zp-step-3">
+        <button class="zp-back-btn" onclick="zpGoStep(2)">← Back</button>
+        <div class="zp-step-label">Step 3 of 3 — Review & confirm</div>
+        <div id="zp-review-items"></div>
+        <button class="zp-cart-btn" id="zp-place-btn" onclick="zpPlaceOrder()" style="margin-top:20px">
+          <span>Place Order 🍕</span>
+          <span id="zp-review-total"></span>
+        </button>
+      </div>
+
+      <!-- STEP 4: Success -->
+      <div class="zp-step" id="zp-step-4">
+        <div class="zp-success">
+          <div class="zp-success-icon">🎉</div>
+          <div class="zp-success-num" id="zp-order-num"></div>
+          <p>Your order is confirmed!<br>We'll start preparing it right away.<br>Estimated time: <strong style="color:#FFF8EE">35–45 minutes</strong></p>
+          <button class="zp-cart-btn" onclick="zpClose();zpReset()" style="margin-top:28px;justify-content:center">Order Again</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- FLOATING CART BUTTON -->
+<button class="zp-float-cart" id="zp-float-cart" onclick="zpOpen()">
+  🛒 <span id="zp-float-label">View Cart</span>
+  <span class="zp-float-badge" id="zp-float-badge">0</span>
+</button>
+
+<!-- TOAST -->
+<div class="zp-toast" id="zp-toast"></div>
+
+<script>
+// ============================================================
+// ZAPIZZA — Live ordering system
+// ============================================================
+let zpMenu = [];
+let zpCart = {};   // { item_id: quantity }
+let zpStep = 1;
+
+// Open modal
+function zpOpen() {
+  document.getElementById('zp-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  if (!zpMenu.length) zpLoadMenu();
+}
+function zpClose() {
+  document.getElementById('zp-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.getElementById('zp-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('zp-overlay')) zpClose();
+});
+
+// Wire all "Order Now" buttons on the page
+document.querySelectorAll('a[href="#cta"], .nav-cta').forEach(el => {
+  el.addEventListener('click', e => { e.preventDefault(); zpOpen(); });
+});
+document.querySelectorAll('.btn-primary').forEach(el => {
+  if (el.textContent.trim().toLowerCase().includes('order')) {
+    el.addEventListener('click', e => { e.preventDefault(); zpOpen(); });
+  }
+});
+
+// Load menu from API
+async function zpLoadMenu() {
+  try {
+    const r = await fetch('/api/menu');
+    zpMenu = await r.json();
+    zpRenderMenu();
+  } catch(e) {
+    document.getElementById('zp-menu-list').innerHTML =
+      '<div style="text-align:center;padding:40px;color:rgba(255,69,0,.7)">⚠ Could not load menu. Is the server running?</div>';
+  }
+}
+
+function zpRenderMenu() {
+  const el = document.getElementById('zp-menu-list');
+  if (!zpMenu.length) { el.innerHTML = '<p style="color:rgba(255,248,238,.4);text-align:center;padding:30px">No menu items found.</p>'; return; }
+  el.innerHTML = zpMenu.map(cat => {
+    if (!cat.items.length) return '';
+    return `<div class="zp-cat-title">${cat.name}</div>` +
+      cat.items.map(item => `
+        <div class="zp-item-row">
+          ${item.image_url
+            ? `<img class="zp-item-img" src="${item.image_url}" alt="${item.name}" loading="lazy">`
+            : `<div class="zp-item-img" style="display:flex;align-items:center;justify-content:center;font-size:1.6rem">🍕</div>`}
+          <div class="zp-item-info">
+            <div class="zp-item-name">${item.name}${item.tag ? ` <span style="background:#FF4500;color:#FFF8EE;font-size:.55rem;padding:2px 7px;border-radius:3px;letter-spacing:.1em;text-transform:uppercase;margin-left:6px;vertical-align:middle">${item.tag}</span>` : ''}</div>
+            <div class="zp-item-desc">${item.description || ''}</div>
+          </div>
+          <div class="zp-item-price">₹${item.price.toLocaleString('en-IN')}</div>
+          <div class="zp-qty">
+            <button class="zp-qty-btn" onclick="zpUpdateCart(${item.id},-1,${item.price})">−</button>
+            <span class="zp-qty-num" id="zp-qty-${item.id}">${zpCart[item.id] || 0}</span>
+            <button class="zp-qty-btn" onclick="zpUpdateCart(${item.id},1,${item.price})">+</button>
+          </div>
+        </div>`).join('');
+  }).join('');
+}
+
+function zpUpdateCart(id, delta, price) {
+  const cur = zpCart[id] || 0;
+  const next = Math.max(0, cur + delta);
+  if (next === 0) delete zpCart[id];
+  else zpCart[id] = next;
+  const qEl = document.getElementById(`zp-qty-${id}`);
+  if (qEl) qEl.textContent = next;
+  zpRefreshCartUI();
+}
+
+function zpRefreshCartUI() {
+  const totalQty = Object.values(zpCart).reduce((s, q) => s + q, 0);
+  const totalPrice = zpCartTotal();
+  const priceStr = `₹${totalPrice.toLocaleString('en-IN')}`;
+
+  // Step 1 button
+  const btn = document.getElementById('zp-to-step2');
+  btn.disabled = totalQty === 0;
+  document.getElementById('zp-cart-total').textContent = priceStr;
+
+  // Floating cart
+  const fc = document.getElementById('zp-float-cart');
+  if (totalQty > 0) {
+    fc.classList.add('visible');
+    document.getElementById('zp-float-badge').textContent = totalQty;
+    document.getElementById('zp-float-label').textContent = priceStr;
+  } else {
+    fc.classList.remove('visible');
+  }
+}
+
+function zpCartTotal() {
+  let total = 0;
+  for (const [id, qty] of Object.entries(zpCart)) {
+    const item = zpMenu.flatMap(c => c.items).find(i => i.id === Number(id));
+    if (item) total += item.price * qty;
+  }
+  return Math.round(total * 100) / 100;
+}
+
+function zpGoStep(n) {
+  if (n === 2) {
+    if (!Object.keys(zpCart).length) return zpToast('Add at least one item!');
+  }
+  if (n === 3) {
+    if (!document.getElementById('zp-name').value.trim()) return zpToast('Please enter your name');
+    if (!document.getElementById('zp-phone').value.trim()) return zpToast('Please enter your phone');
+    if (document.getElementById('zp-type').value === 'delivery' &&
+        !document.getElementById('zp-address').value.trim()) return zpToast('Please enter your delivery address');
+    zpRenderReview();
+  }
+  zpStep = n;
+  document.querySelectorAll('.zp-step').forEach(s => s.classList.remove('active'));
+  document.getElementById(`zp-step-${n}`).classList.add('active');
+  const titles = {1:'Order Online',2:'Your Details',3:'Review Order',4:'Order Confirmed!'};
+  document.getElementById('zp-modal-title').textContent = titles[n];
+  document.querySelector('.zp-modal').scrollTop = 0;
+}
+
+function zpToggleAddress() {
+  const isDelivery = document.getElementById('zp-type').value === 'delivery';
+  document.getElementById('zp-addr-group').style.display = isDelivery ? 'block' : 'none';
+}
+
+function zpRenderReview() {
+  const allItems = zpMenu.flatMap(c => c.items);
+  const subtotal = zpCartTotal();
+  const tax = Math.round(subtotal * 0.05 * 100) / 100;
+  const total = Math.round((subtotal + tax) * 100) / 100;
+  const rows = Object.entries(zpCart).map(([id, qty]) => {
+    const item = allItems.find(i => i.id === Number(id));
+    if (!item) return '';
+    return `<div class="zp-summary-row">
+      <span>${item.name} <span style="color:rgba(255,248,238,.4)">×${qty}</span></span>
+      <span style="color:#D4A017">₹${(item.price * qty).toLocaleString('en-IN')}</span>
+    </div>`;
+  }).join('');
+
+  document.getElementById('zp-review-items').innerHTML = `
+    ${rows}
+    <div class="zp-summary-row" style="margin-top:10px">
+      <span style="color:rgba(255,248,238,.45)">Subtotal</span>
+      <span>₹${subtotal.toLocaleString('en-IN')}</span>
+    </div>
+    <div class="zp-summary-row">
+      <span style="color:rgba(255,248,238,.45)">GST (5%)</span>
+      <span>₹${tax.toLocaleString('en-IN')}</span>
+    </div>
+    <div class="zp-total-row">
+      <span>Total</span>
+      <span class="zp-total-price">₹${total.toLocaleString('en-IN')}</span>
+    </div>
+    <div style="margin-top:16px;padding:14px;background:rgba(255,248,238,.03);border-radius:8px;font-size:.8rem;color:rgba(255,248,238,.45);line-height:1.7">
+      📍 <strong style="color:rgba(255,248,238,.7)">${document.getElementById('zp-type').value === 'delivery' ? 'Delivery to:' : 'Dine-in'}</strong><br>
+      ${document.getElementById('zp-type').value === 'delivery' ? document.getElementById('zp-address').value : 'Table service'}<br>
+      👤 ${document.getElementById('zp-name').value} · ${document.getElementById('zp-phone').value}
+    </div>`;
+  document.getElementById('zp-review-total').textContent = `₹${total.toLocaleString('en-IN')}`;
+}
+
+async function zpPlaceOrder() {
+  const btn = document.getElementById('zp-place-btn');
+  btn.disabled = true;
+  btn.querySelector('span').textContent = 'Placing order...';
+
+  const allItems = zpMenu.flatMap(c => c.items);
+  const items = Object.entries(zpCart).map(([id, qty]) => ({
+    menu_item_id: Number(id), quantity: qty
+  }));
+
+  try {
+    const r = await fetch('/api/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        customer_name:    document.getElementById('zp-name').value.trim(),
+        customer_phone:   document.getElementById('zp-phone').value.trim(),
+        customer_address: document.getElementById('zp-address').value.trim() || null,
+        order_type:       document.getElementById('zp-type').value,
+        notes:            document.getElementById('zp-notes').value.trim() || null,
+        items
+      })
+    });
+    const order = await r.json();
+    if (!r.ok) throw new Error(order.error || 'Failed');
+    document.getElementById('zp-order-num').textContent = order.order_number;
+    zpGoStep(4);
+    zpCart = {};
+    zpRefreshCartUI();
+  } catch(e) {
+    zpToast('Order failed: ' + e.message);
+    btn.disabled = false;
+    btn.querySelector('span').textContent = 'Place Order 🍕';
+  }
+}
+
+function zpReset() {
+  zpCart = {};
+  zpStep = 1;
+  document.getElementById('zp-name').value = '';
+  document.getElementById('zp-phone').value = '';
+  document.getElementById('zp-address').value = '';
+  document.getElementById('zp-notes').value = '';
+  document.getElementById('zp-type').value = 'delivery';
+  document.querySelectorAll('.zp-step').forEach(s => s.classList.remove('active'));
+  document.getElementById('zp-step-1').classList.add('active');
+  document.getElementById('zp-modal-title').textContent = 'Order Online';
+  zpRenderMenu();
+}
+
+function zpToast(msg) {
+  const t = document.getElementById('zp-toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>
